@@ -1,0 +1,9 @@
+tensorflow==1.8.0
+opencv-python~=4.1.2.30
+numpy~=1.18.1
+scipy
+pandas
+tensorflow-gpu~=1.13.1
+numba~=0.49.0
+setuptools~=39.1.0
+PySimpleGUI~=4.20.0
