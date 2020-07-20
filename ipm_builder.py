@@ -285,4 +285,3 @@ def convert_from_ipm_corners_to_image_corners(img, P, ipm_corners):
                 img_corners.append((x_new, y_new))
     img_corners.reverse()
     return img_corners
-

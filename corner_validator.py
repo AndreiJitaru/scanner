@@ -5,31 +5,19 @@ import numpy as np
 from ipm_builder import convert_from_image_corners_to_ipm_corners, convert_from_ipm_corners_to_image_corners, \
     compute_projection_matrix, compute_ipm_and_corners, compute_ipm_fast_numba
 from shared import draw_corners, convert_to_list_of_tuples
-from shared import  convert_to_list_of_arrays
+from shared import convert_to_list_of_arrays
 
 last_good_ipm_corners = []
+last_good_img_corners = []
 q = []
 projection_matrix = np.zeros((3, 4), np.float32)
 
 
-def get_angles(corners):
-    angles = []
-    for a in range(0, len(corners)):
-        point_a = corners[a % 4]
-        point_b = corners[(a + 1) % 4]
-        point_c = corners[(a + 2) % 4]
-        dot_product = (point_b[1] - point_a[1]) * (point_b[1] - point_c[1]) + (point_b[0] - point_a[0]) * (
-                point_b[0] - point_c[0])
-        angle = np.rad2deg(
-            np.arccos(
-                dot_product / (
-                        math.sqrt(math.pow(point_b[1] - point_a[1], 2) + math.pow(point_b[0] - point_a[0], 2)) *
-                        math.sqrt(math.pow(point_b[1] - point_c[1], 2) + math.pow(point_b[0] - point_c[0], 2))
-                )
-            )
-        )
-        angles.append(angle)
-    return angles
+def refresh_corners():
+    global last_good_img_corners, last_good_ipm_corners, q
+    last_good_img_corners = []
+    last_good_ipm_corners = []
+    q = []
 
 
 def are_corners_valid(corners):
@@ -122,13 +110,6 @@ def validate_ipm_corners(first_frame, current_ipm_corners):
     return good_ipm_corners
 
 
-font = cv2.FONT_HERSHEY_SIMPLEX
-bottomLeftCornerOfText = (10, 450)
-fontScale = 4
-fontColor = (255, 255, 255)
-lineType = cv2.LINE_AA
-
-
 def compute_rotation_angle(point_a, point_b):
     m = (point_a[1] - point_b[1]) / (point_a[0] - point_b[0])
     angle = np.rad2deg(np.arctan(m))
@@ -136,35 +117,19 @@ def compute_rotation_angle(point_a, point_b):
 
 
 def validate_image_corners(first_frame, img, current_image_corners):
-    global projection_matrix
+    global projection_matrix, last_good_img_corners
     if first_frame:
         projection_matrix = compute_projection_matrix(img, current_image_corners)
-
-    #ipm_image, temp = compute_ipm_fast_numba(img, projection_matrix, convert_to_list_of_arrays(current_image_corners))
     current_ipm_corners = convert_from_image_corners_to_ipm_corners(projection_matrix, current_image_corners)
-    #clone_ipm = ipm_image.copy()
-    #draw_corners(clone_ipm, current_ipm_corners, (0, 0, 255))
     final_ipm_corners = validate_ipm_corners(first_frame, current_ipm_corners)
-    #draw_corners(clone_ipm, final_ipm_corners, (255, 0, 0))
     final_image_corners = convert_from_ipm_corners_to_image_corners(img, projection_matrix, final_ipm_corners)
-    #cv2.imshow("ipm", clone_ipm)
-    # if len(final_image_corners) > 3:
-    #     angle_of_rotation = compute_rotation_angle(final_image_corners[2], final_image_corners[3])
-    # print("Unghi de rotatie:", angle_of_rotation)
-    # angles = get_angles(final_ipm_corners)
-    # print("TL", angles[0])
-    # print("TR", angles[1])
-    # print("BR", angles[2])
-    # print("TL", angles[3])
-    # cv2.imshow("ddadas", img)
-    # cv2.putText(img, angle_of_rotation,
-    #             bottomLeftCornerOfText,
-    #             font,
-    #             fontScale,
-    #             fontColor,
-    #             lineType)
-    # cv2.imshow("ddadas", img)
-    # draw_corners(img, final_image_corners, (255, 0, 0))
+
+    if len(final_image_corners) < 4:
+        final_image_corners = last_good_img_corners
+        raise Exception
+    else:
+        last_good_img_corners = final_image_corners
+
     return final_image_corners
 
 
